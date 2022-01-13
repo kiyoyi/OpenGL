@@ -88,13 +88,12 @@ int main()
 	// texture
 	unsigned int texture1, texture2;
 	glGenTextures(1, &texture1);
-	glGenTextures(1, &texture2);
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, texture1);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	int width, height, nrChannels;
@@ -112,20 +111,21 @@ int main()
 	}
 	stbi_image_free(data);
 
+	glGenTextures(1, &texture2);
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, texture2);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
 	stbi_set_flip_vertically_on_load(true);
-	data = stbi_load("red.jpg", &width, &height, &nrChannels, 0);
+	data = stbi_load("awesomeface.png", &width, &height, &nrChannels, 0);
 	if (data) {
 		glPixelStorei(GL_UNPACK_ALIGNMENT, 2);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
 		glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 		glGenerateMipmap(GL_TEXTURE_2D);
 	}
@@ -141,6 +141,9 @@ int main()
 	ourShader.setInt("texture1", 0);
 	ourShader.setInt("texture2", 1);
 
+	float mixVal = 0.5f;
+	double time = glfwGetTime();
+
 	while (!glfwWindowShouldClose(window))
 	{
 		processInput(window);
@@ -148,7 +151,21 @@ int main()
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
 
+		if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS && glfwGetTime() - time >= 0.1)
+		{
+			time = glfwGetTime();
+			mixVal += 0.01f;
+			if (mixVal >= 1.0f) mixVal = 1.0f;
+		}
+		else if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS && glfwGetTime() - time >= 0.1)
+		{
+			time = glfwGetTime();
+			mixVal -= 0.01f;
+			if (mixVal <= 0.0f) mixVal = 0.0f;
+		}
+
 		ourShader.use();
+		ourShader.setFloat("mixValue", mixVal);
 		//ourShader.setFloat("offset", 0.5);
 		//glBindTexture(GL_TEXTURE_2D, texture);
 		glBindVertexArray(VAO);
