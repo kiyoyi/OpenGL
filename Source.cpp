@@ -7,6 +7,15 @@
 #include <Shader.h>
 #include <iostream>
 
+
+// camera position
+glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
+glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
+glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
+
+float lastTime = 0.0f;
+float mixVal = 0.5f;
+
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
 	glViewport(0, 0, width, height);
@@ -15,7 +24,55 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 void processInput(GLFWwindow* window)
 {
 	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-		glfwSetWindowShouldClose(window, true);
+	{
+		glfwSetWindowShouldClose(window, true); 
+		return;
+	}
+
+	if (glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS)
+	{
+		glfwSetWindowShouldClose(window, GL_TRUE);
+		return;
+	}
+
+	if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS && glfwGetTime() - lastTime >= 0.1)
+	{
+		lastTime = glfwGetTime();
+		mixVal += 0.01f;
+		if (mixVal >= 1.0f) mixVal = 1.0f;
+		return;
+	}
+	
+	if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS && glfwGetTime() - lastTime >= 0.1)
+	{
+		lastTime = glfwGetTime();
+		mixVal -= 0.01f;
+		if (mixVal <= 0.0f) mixVal = 0.0f;
+		return;
+	}
+
+	float cameraSpeed = 0.05f;
+	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+	{
+		cameraPos += cameraSpeed * cameraFront;
+		return;
+	}
+
+	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+	{
+		cameraPos -= cameraSpeed * cameraFront;
+		return;
+	}
+	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+	{
+		cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+		return;
+	}
+	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+	{
+		cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+		return;
+	}
 }
 
 
@@ -182,9 +239,6 @@ int main()
 	ourShader.setInt("texture1", 0);
 	ourShader.setInt("texture2", 1);
 
-	float mixVal = 0.5f;
-	double time = glfwGetTime();
-
 	glm::vec3 cubePositions[] = {
 	  glm::vec3(0.0f,  0.0f,  0.0f),
 	  glm::vec3(2.0f,  5.0f, -15.0f),
@@ -198,6 +252,7 @@ int main()
 	  glm::vec3(-1.3f,  1.0f, -1.5f)
 	};
 
+	lastTime = glfwGetTime();
 	while (!glfwWindowShouldClose(window))
 	{
 		processInput(window);
@@ -205,23 +260,8 @@ int main()
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		if (glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS) {
-			glfwSetWindowShouldClose(window, GL_TRUE);
-			continue;
-		}
-
-		if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS && glfwGetTime() - time >= 0.1)
-		{
-			time = glfwGetTime();
-			mixVal += 0.01f;
-			if (mixVal >= 1.0f) mixVal = 1.0f;
-		}
-		else if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS && glfwGetTime() - time >= 0.1)
-		{
-			time = glfwGetTime();
-			mixVal -= 0.01f;
-			if (mixVal <= 0.0f) mixVal = 0.0f;
-		}
+		processInput(window);
+		
 		ourShader.use();
 		ourShader.setFloat("mixValue", mixVal);
 
@@ -241,11 +281,8 @@ int main()
 			model = glm::rotate(model, (float)glfwGetTime() * glm::radians(50.0f), glm::vec3(0.5f, 1.0f, 0.0f));
 			ourShader.setMat4("model", glm::value_ptr(model));
 			
-			float radius = 10.0f;
-			float camX = sin(glfwGetTime()) * radius;
-			float camZ = cos(glfwGetTime()) * radius;
 			glm::mat4 view = glm::mat4(1.0f);
-			view = glm::lookAt(glm::vec3(camX, 0, camZ), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
+			view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
 			ourShader.setMat4("view", glm::value_ptr(view));
 			
 			glDrawArrays(GL_TRIANGLES, 0, 36);
