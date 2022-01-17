@@ -15,6 +15,13 @@ glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
 
 float lastTime = 0.0f;
 float mixVal = 0.5f;
+float deltaTime = 0.0f;
+float lastFrame = 0.0f;
+float yaw = 0.0f;
+float pitch = 0.0f;
+float lastX = 400, lastY = 300;
+bool firstMouse = true;
+float fov = 45.0f;
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
@@ -23,6 +30,7 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 
 void processInput(GLFWwindow* window)
 {
+	float cameraSpeed = 2.5f * deltaTime;
 	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
 	{
 		glfwSetWindowShouldClose(window, true); 
@@ -51,7 +59,6 @@ void processInput(GLFWwindow* window)
 		return;
 	}
 
-	float cameraSpeed = 0.05f;
 	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
 	{
 		cameraPos += cameraSpeed * cameraFront;
@@ -75,6 +82,43 @@ void processInput(GLFWwindow* window)
 	}
 }
 
+void mouse_callback(GLFWwindow* window, double xpos, double ypos)
+{
+	if (firstMouse)
+	{
+		lastX = xpos;
+		lastY = ypos;
+		firstMouse = false;
+	}
+	// mouse input
+	float xoffset = xpos - lastX;
+	float yoffset = lastY - ypos;
+	lastX = xpos;
+	lastY = ypos;
+
+	float sensitivity = 0.05f;
+	xoffset *= sensitivity;
+	yoffset *= sensitivity;
+
+	yaw += xoffset;
+	pitch += yoffset;
+
+	if (pitch > 89.0f) pitch = 89.0f;
+	if (pitch < -89.0f) pitch = -89.0f;
+
+	glm::vec3 front;
+	front.x = cos(glm::radians(pitch)) * cos(glm::radians(yaw));
+	front.y = sin(glm::radians(pitch));
+	front.z = cos(glm::radians(pitch)) * sin(glm::radians(yaw));
+	cameraFront = glm::normalize(front);
+}
+
+void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
+{
+	if (fov >= 1.0f && fov <= 45.0f) fov -= yoffset;
+	if (fov <= 1.0f) fov = 1.0f;
+	if (fov >= 45.0f) fov = 45.0f;
+}
 
 int main()
 {
@@ -106,6 +150,9 @@ int main()
 
 	glViewport(0, 0, 800, 600);
 	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+	glfwSetCursorPosCallback(window, mouse_callback);
+	glfwSetScrollCallback(window, scroll_callback);
 
 	// build and compile our shader program
 	// ------------------------------------
@@ -255,6 +302,10 @@ int main()
 	lastTime = glfwGetTime();
 	while (!glfwWindowShouldClose(window))
 	{
+		float currentFrame = glfwGetTime();
+		deltaTime = currentFrame - lastFrame;
+		lastFrame = currentFrame;
+
 		processInput(window);
 
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
@@ -267,7 +318,7 @@ int main()
 
 		// transform 3D
 		glm::mat4 projection = glm::mat4(1.0f);
-		projection = glm::perspective(glm::radians(45.0f), (float)(screenWidth * 1.0f / screenHeight), 0.1f, 100.0f);
+		projection = glm::perspective(glm::radians(fov), (float)(screenWidth * 1.0f / screenHeight), 0.1f, 100.0f);
 		unsigned int viewLoc = glGetUniformLocation(ourShader.ID, "view");
 		unsigned int projectionLoc = glGetUniformLocation(ourShader.ID, "projection");
 		glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
